@@ -74,8 +74,13 @@ export const getUserProgress = async (userId: string): Promise<AppState> => {
             streak: 0,
             lastVisit: null
         };
-    } catch (error) {
-        console.error('Error getting user progress:', error);
+    } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            console.warn('Firestore permission denied. Using default local state. Check firestore.rules.');
+        } else {
+            console.error('Error getting user progress:', error);
+        }
+
         // Return default state on error
         return {
             language: null,
@@ -113,9 +118,14 @@ export const saveUserProgress = async (userId: string, state: AppState): Promise
                 totalWordsLearned: 0
             });
         }
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            console.warn('Firestore permission denied. User progress will not be saved. Check firestore.rules.');
+            // Do not throw, allows app to continue in "demo" mode
+            return;
+        }
         console.error('Error saving user progress:', error);
-        throw error;
+        // We still don't throw to prevent app crash, but log it
     }
 };
 
