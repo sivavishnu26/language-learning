@@ -26,7 +26,7 @@ const vocabularySchema: Schema = {
 export const generateDailyLesson = async (language: Language): Promise<DailyLesson> => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    
+
     // We request 5 words for a "calm" micro-lesson
     const prompt = `Generate 5 beginner-friendly vocabulary words for a ${language} learner (English speaker). 
     Focus on a specific calm theme if possible (e.g., Nature, Home, Greetings, Colors). 
@@ -46,7 +46,7 @@ export const generateDailyLesson = async (language: Language): Promise<DailyLess
     if (!text) throw new Error("No response from AI");
 
     const data = JSON.parse(text) as { words: Omit<VocabularyWord, 'practiced'>[] };
-    
+
     return {
       id: today,
       words: data.words.map(w => ({ ...w, practiced: false })),
@@ -55,20 +55,8 @@ export const generateDailyLesson = async (language: Language): Promise<DailyLess
 
   } catch (error) {
     console.error("Gemini Generation Error:", error);
-    // Fallback static lesson if AI fails, to prevent app crash during demo
-    return {
-      id: new Date().toISOString().split('T')[0],
-      completed: false,
-      words: [
-        {
-          targetWord: "Hola",
-          nativeMeaning: "Hello",
-          pronunciationGuide: "oh-lah",
-          exampleSentenceTarget: "Hola, amigo.",
-          exampleSentenceNative: "Hello, friend.",
-          practiced: false
-        }
-      ]
-    };
+    // Fallback to mock data if AI fails, to prevent app crash during demo
+    const { getMockLesson } = await import('../data/mockData');
+    return getMockLesson(language);
   }
 };
