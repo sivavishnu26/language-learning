@@ -39,13 +39,17 @@ export const SignIn: React.FC = () => {
             navigate('/');
         } catch (err: any) {
             console.error('Login error:', err);
-            let msg = 'Something went wrong. Please try again.';
-            if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                msg = 'Invalid email or password.';
-            } else if (err.code === 'auth/too-many-requests') {
-                msg = 'Too many attempts. Please try again later.';
-            }
-            setError(msg);
+            const errorMessages: Record<string, string> = {
+                'auth/user-not-found': 'No account found with this email. Please sign up.',
+                'auth/wrong-password': 'Incorrect password. Please try again.',
+                'auth/invalid-credential': 'Invalid email or password.',
+                'auth/invalid-email': 'Please enter a valid email address.',
+                'auth/user-disabled': 'This account has been disabled. Please contact support.',
+                'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+                'auth/network-request-failed': 'Network error. Please check your connection and try again.',
+                'auth/internal-error': 'An internal error occurred. Please try again later.',
+            };
+            setError(errorMessages[err.code] || 'Something went wrong. Please try again.');
         } finally {
             setLoading(false);
         }

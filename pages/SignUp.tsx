@@ -56,15 +56,16 @@ export const SignUp: React.FC = () => {
             navigate('/');
         } catch (err: any) {
             console.error('Signup error:', err);
-            let msg = 'Failed to create account.';
-            if (err.code === 'auth/email-already-in-use') {
-                msg = 'Email already in use. Please sign in.';
-            } else if (err.code === 'auth/invalid-email') {
-                msg = 'Invalid email address.';
-            } else if (err.code === 'auth/weak-password') {
-                msg = 'Password should be at least 6 characters.';
-            }
-            setError(msg);
+            const errorMessages: Record<string, string> = {
+                'auth/email-already-in-use': 'An account with this email already exists. Please sign in.',
+                'auth/invalid-email': 'Please enter a valid email address.',
+                'auth/weak-password': 'Password must be at least 6 characters long.',
+                'auth/operation-not-allowed': 'Email/password accounts are not enabled. Please contact support.',
+                'auth/network-request-failed': 'Network error. Please check your connection and try again.',
+                'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+                'auth/internal-error': 'An internal error occurred. Please try again later.',
+            };
+            setError(errorMessages[err.code] || 'Failed to create account. Please try again.');
         } finally {
             setLoading(false);
         }
