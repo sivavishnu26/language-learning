@@ -53,8 +53,9 @@ export const SignUp: React.FC = () => {
 
         try {
             await signup(formData.email, formData.password, { name: formData.name });
-            navigate('/');
+            navigate('/', { replace: true });
         } catch (err: any) {
+            setLoading(false); // CRITICAL: Reset loading on error
             console.error('Signup error:', err);
             const errorMessages: Record<string, string> = {
                 'auth/email-already-in-use': 'An account with this email already exists. Please sign in.',
@@ -66,9 +67,8 @@ export const SignUp: React.FC = () => {
                 'auth/internal-error': 'An internal error occurred. Please try again later.',
             };
             setError(errorMessages[err.code] || 'Failed to create account. Please try again.');
-        } finally {
-            setLoading(false);
         }
+        // NOTE: Don't setLoading(false) here on success - navigation handles unmount
     };
 
     return (

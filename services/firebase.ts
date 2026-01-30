@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDUe63sG0MxdSIDk4ui3SA7emJvGpYq8Ok",
-  authDomain: "learning-language-6ce53.firebaseapp.com",
-  projectId: "learning-language-6ce53",
-  storageBucket: "learning-language-6ce53.firebasestorage.app",
-  messagingSenderId: "708799915191",
-  appId: "1:708799915191:web:09291bcd10aba053515932"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
