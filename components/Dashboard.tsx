@@ -4,13 +4,15 @@ import { Button } from './Button';
 import { LanguageBubbles } from './LanguageBubbles';
 import { WordCard } from './WordCard';
 import { ProgressBar } from './ProgressBar';
+import { ProgressStats } from './ProgressStats';
 import { generateDailyLesson } from '../services/geminiService';
 import {
     getUserProgress,
     saveUserProgress,
     markWordAsPracticed,
     resetDailyIfNewDay,
-    saveLessonHistory
+    saveLessonHistory,
+    getUserStats
 } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { AppState, ViewState, Language } from '../types';
@@ -31,6 +33,7 @@ export const Dashboard: React.FC = () => {
     const [view, setView] = useState<ViewState>('loading');
     const [loadingMessage, setLoadingMessage] = useState('');
     const [currentWordIndex, setCurrentWordIndex] = useState(0);
+    const [stats, setStats] = useState({ streak: 0, totalWords: 0 });
 
     const loadAppData = useCallback(async () => {
         if (!user) return;
@@ -47,6 +50,13 @@ export const Dashboard: React.FC = () => {
             if (processedState !== stored) {
                 await saveUserProgress(user.uid, processedState);
             }
+
+            // Fetch latest stats
+            const userStats = await getUserStats(user.uid);
+            setStats({
+                streak: userStats.currentStreak,
+                totalWords: userStats.totalWords
+            });
 
             if (!processedState.language) {
                 setView('onboarding');
@@ -185,6 +195,9 @@ export const Dashboard: React.FC = () => {
                                 <span>{currentWordIndex + 1} / {state.currentLesson.words.length}</span>
                             </div>
                             <ProgressBar progress={progress} />
+                            <div className="mt-6">
+                                <ProgressStats streak={stats.streak} totalWords={stats.totalWords} />
+                            </div>
                         </div>
 
                         <div className="flex-grow flex flex-col justify-center">
@@ -213,10 +226,8 @@ export const Dashboard: React.FC = () => {
                         </div>
 
                         <div className="glass p-6 rounded-2xl shadow-sm border border-slate-100 w-full">
-                            <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Progress</p>
-                            <p className="text-4xl text-slate-800 font-medium">
-                                {state.streak} <span className="text-lg text-slate-400 font-normal">days learned</span>
-                            </p>
+                            <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold mb-4">Total Progress</p>
+                            <ProgressStats streak={stats.streak} totalWords={stats.totalWords} />
                         </div>
 
                         <div className="flex gap-4 w-full">
