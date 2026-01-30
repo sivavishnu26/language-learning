@@ -6,13 +6,13 @@ import { LanguageBubbles } from './components/LanguageBubbles';
 import { WordCard } from './components/WordCard';
 import { ProgressBar } from './components/ProgressBar';
 import { generateDailyLesson } from './services/geminiService';
-import { 
-  getStoredState, 
-  saveState, 
-  markWordAsPracticed, 
-  resetDailyIfNewDay 
+import {
+  getStoredState,
+  saveState,
+  markWordAsPracticed,
+  resetDailyIfNewDay
 } from './services/storageService';
-import { isAuthenticated, logout } from './services/authService';
+import { logout, subscribeToAuthChanges } from './services/authService';
 import { AppState, ViewState, Language } from './types';
 import { Loader2, CheckCircle2, BookOpen, LogOut } from 'lucide-react';
 
@@ -28,61 +28,49 @@ const App: React.FC = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
 
-  // Initialize app
-  useEffect(() => {
-    const initialize = async () => {
-      // Check auth first
-      if (!isAuthenticated()) {
-        setView('login');
-        return;
-      }
+  const loadAppData = useCallback(async () => {
+    const stored = getStoredState();
 
-      const stored = getStoredState();
-      
-      // Check if it's a new day and reset the daily lesson logic if needed
-      const processedState = resetDailyIfNewDay(stored);
-      setState(processedState);
+    // Check if it's a new day and reset the daily lesson logic if needed
+    const processedState = resetDailyIfNewDay(stored);
+    setState(processedState);
 
-      if (!processedState.language) {
-        setView('onboarding');
-      } else if (processedState.currentLesson) {
-        // If we have a lesson but haven't finished it
-        if (processedState.completedToday) {
-           setView('summary');
-        } else {
-           // Find the first uncompleted word
-           const nextIndex = processedState.currentLesson.words.findIndex(w => !w.practiced);
-           setCurrentWordIndex(nextIndex === -1 ? 0 : nextIndex);
-           setView('lesson');
-        }
+    if (!processedState.language) {
+      setView('onboarding');
+    } else if (processedState.currentLesson) {
+      // If we have a lesson but haven't finished it
+      if (processedState.completedToday) {
+        setView('summary');
       } else {
-        // Language selected, but no lesson generated for today yet
-        await loadNewLesson(processedState.language);
+        // Find the first uncompleted word
+        const nextIndex = processedState.currentLesson.words.findIndex(w => !w.practiced);
+        setCurrentWordIndex(nextIndex === -1 ? 0 : nextIndex);
+        setView('lesson');
       }
-    };
-    initialize();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    } else {
+      // Language selected, but no lesson generated for today yet
+      await loadNewLesson(processedState.language);
+    }
   }, []);
 
-  const handleLoginSuccess = () => {
-    // After login, go to initialization logic or just straight to onboarding/check state
-    const stored = getStoredState();
-    if (stored.language) {
-        // If they have a language, try to load/resume lesson
-        const processedState = resetDailyIfNewDay(stored);
-        setState(processedState);
-        if (processedState.currentLesson && !processedState.completedToday) {
-             const nextIndex = processedState.currentLesson.words.findIndex(w => !w.practiced);
-             setCurrentWordIndex(nextIndex === -1 ? 0 : nextIndex);
-             setView('lesson');
-        } else if (processedState.completedToday) {
-            setView('summary');
-        } else {
-            loadNewLesson(processedState.language);
+  // Initialize app
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges((user) => {
+      if (user) {
+        // Only load data if we are not already in a valid authenticated view to avoid re-loading
+        // Actually, logic is safe to run.
+        if (view === 'login' || view === 'loading') {
+          loadAppData();
         }
-    } else {
-        setView('onboarding');
-    }
+      } else {
+        setView('login');
+      }
+    });
+    return () => unsubscribe();
+  }, [loadAppData, view]);
+
+  const handleLoginSuccess = () => {
+    // Auth state listener will handle the transition
   };
 
   const handleLogout = () => {
@@ -97,7 +85,7 @@ const App: React.FC = () => {
     setLoadingMessage(`Crafting a calm ${lang} lesson for you...`);
     try {
       const newLesson = await generateDailyLesson(lang);
-      
+
       setState(prev => {
         const newState = {
           ...prev,
@@ -132,7 +120,7 @@ const App: React.FC = () => {
 
     // Mark current word as practiced
     const updatedLesson = markWordAsPracticed(state.currentLesson, currentWordIndex);
-    
+
     // Update state
     setState(prev => {
       const newState = { ...prev, currentLesson: updatedLesson };
@@ -146,10 +134,10 @@ const App: React.FC = () => {
     } else {
       // Lesson complete
       setState(prev => {
-        const newState = { 
-          ...prev, 
+        const newState = {
+          ...prev,
           completedToday: true,
-          streak: prev.streak + 1 
+          streak: prev.streak + 1
         };
         saveState(newState);
         return newState;
@@ -185,7 +173,7 @@ const App: React.FC = () => {
       case 'lesson':
         if (!state.currentLesson) return null;
         const progress = ((currentWordIndex) / state.currentLesson.words.length) * 100;
-        
+
         return (
           <div className="flex flex-col h-full max-w-lg mx-auto w-full">
             <div className="mb-8 pt-4">
@@ -197,13 +185,13 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex-grow flex flex-col justify-center">
-              <WordCard 
-                word={state.currentLesson.words[currentWordIndex]} 
+              <WordCard
+                word={state.currentLesson.words[currentWordIndex]}
                 onComplete={handleWordComplete}
                 language={state.language || 'Spanish'}
               />
             </div>
-            
+
             <div className="h-8 text-center text-slate-300 text-sm mt-4">
               Take your time. There is no rush.
             </div>
@@ -220,7 +208,7 @@ const App: React.FC = () => {
               <h2 className="text-3xl text-slate-800 serif">Session Complete</h2>
               <p className="text-slate-500 text-lg">You've successfully practiced today.</p>
             </div>
-            
+
             <div className="glass p-6 rounded-2xl shadow-sm border border-slate-100 w-full">
               <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Progress</p>
               <p className="text-4xl text-slate-800 font-medium">
@@ -229,9 +217,9 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex gap-4 w-full">
-                <Button variant="secondary" fullWidth onClick={handleChangeLanguage}>
-                    Change Language
-                </Button>
+              <Button variant="secondary" fullWidth onClick={handleChangeLanguage}>
+                Change Language
+              </Button>
             </div>
           </div>
         );
@@ -240,14 +228,14 @@ const App: React.FC = () => {
 
   return (
     <Layout>
-        {/* Optional Logout button in header area */}
-        {view !== 'login' && view !== 'loading' && (
-            <div className="fixed top-6 right-6 z-50">
-                <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Log out">
-                    <LogOut className="w-5 h-5" />
-                </button>
-            </div>
-        )}
+      {/* Optional Logout button in header area */}
+      {view !== 'login' && view !== 'loading' && (
+        <div className="fixed top-6 right-6 z-50">
+          <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Log out">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      )}
       {renderContent()}
     </Layout>
   );

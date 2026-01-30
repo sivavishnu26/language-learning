@@ -1,26 +1,30 @@
-// Simple simulated auth service using localStorage
-const USER_KEY = 'lingocalm_user';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User
+} from "firebase/auth";
+import { auth } from "./firebase";
 
-export const login = async (email: string): Promise<boolean> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  if (email.includes('@')) {
-    localStorage.setItem(USER_KEY, JSON.stringify({ email }));
-    return true;
-  }
-  return false;
+export const login = async (email: string, password: string): Promise<User> => {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
 };
 
-export const logout = () => {
-  localStorage.removeItem(USER_KEY);
+export const signUp = async (email: string, password: string): Promise<User> => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
 };
 
-export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem(USER_KEY);
+export const logout = async () => {
+  await signOut(auth);
 };
 
-export const getCurrentUserEmail = (): string | null => {
-  const data = localStorage.getItem(USER_KEY);
-  return data ? JSON.parse(data).email : null;
+export const getCurrentUser = (): User | null => {
+  return auth.currentUser;
+};
+
+export const subscribeToAuthChanges = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
 };
