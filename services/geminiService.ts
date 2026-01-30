@@ -1,7 +1,16 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { DailyLesson, Language, VocabularyWord } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const getAI = () => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey || apiKey === "PLACEHOLDER_API_KEY") {
+    console.warn("Gemini API Key is missing or using placeholder. AI features will be disabled.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
+const ai = getAI();
 
 const vocabularySchema: Schema = {
   type: Type.OBJECT,
@@ -32,8 +41,12 @@ export const generateDailyLesson = async (language: Language): Promise<DailyLess
     Focus on a specific calm theme if possible (e.g., Nature, Home, Greetings, Colors). 
     Ensure the words are basic and useful.`;
 
+    if (!ai) {
+      throw new Error("AI not initialized");
+    }
+
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
